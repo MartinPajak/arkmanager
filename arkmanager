@@ -125,42 +125,42 @@ doUpdate() {
     echo "Steam version $current_steam_version"
     # echo $update
     if [ ! $current_steam_version == $installed_version ] && [ ! $current_steam_version == "" ] && [ ! $installed_version == "" ] ; then
-            update=1
+        update=1
     fi
     # echo $update
-        if [ -f $ARKSERVERROOT/updateinprogress ] ; then
-                if [ $(( (`date +%s` - `stat -L --format %Y $ARKSERVERROOT/updateinprogress`) > (60*60) )) -eq 1 ] ; then
-                        rm -f $ARKSERVERROOT/updateinprogress
-                fi
+    if [ -f $ARKSERVERROOT/updateinprogress ] ; then
+        if [ $(( (`date +%s` - `stat -L --format %Y $ARKSERVERROOT/updateinprogress`) > (60*60) )) -eq 1 ] ; then
+            rm -f $ARKSERVERROOT/updateinprogress
         fi
-        if [ ! -f $ARKSERVERROOT/updateinprogress ] ; then
-                touch $ARKSERVERROOT/updateinprogress
+    fi
+    if [ ! -f $ARKSERVERROOT/updateinprogress ] ; then
+        touch $ARKSERVERROOT/updateinprogress
         if [ $update == 1 ] ; then
-                        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, server is restarting in 10 minutes!
-                        sleep 5m
-                        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, server is restarting in 5 minutes!
-                        sleep 2m
-                        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, server is restarting in 3 minutes!
-                        sleep 2m
-                        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, server is restarting in 1 minutes!
-                        sleep 1m
-                        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, world will be saved now and server restarted!
-                        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT saveworld
-                        sleep 5
-                        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT doexit
-                        sleep 20
+            $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, server is restarting in 10 minutes!
+            sleep 5m
+            $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, server is restarting in 5 minutes!
+            sleep 2m
+            $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, server is restarting in 3 minutes!
+            sleep 2m
+            $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, server is restarting in 1 minutes!
+            sleep 1m
+            $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, world will be saved now and server restarted!
+            $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT saveworld
+            sleep 5
+            $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT doexit
+            sleep 20
             # check whether the server is gone down and wait if needed
             screen -wipe > /dev/null
             IsServerRunning=`screen -ls $SERVICENAME | grep 'No Sockets found'`
             if [ "test$IsServerRunning" == "test" ] ; then
                 echo "Server $SERVICENAME is still running. waiting..."
-                                COUNTER=0
+                COUNTER=0
                 CONTINUE=0
-                                while [ $CONTINUE -lt 1 ]; do
+                while [ $CONTINUE -lt 1 ]; do
                     sleep 10
                     IsServerRunning=`screen -ls $SERVICENAME | grep 'No Sockets found'`
                     if [ "test$IsServerRunning" != "test" ] ; then
-                                                CONTINUE=1
+                        CONTINUE=1
                     else
                         COUNTER=$((COUNTER+1))
                         # try to kill server through screen session
@@ -173,12 +173,12 @@ doUpdate() {
                             rm -f $ARKSERVERROOT/updateinprogress
                             exit 1
                         fi
-                                        fi
-                                done
+                    fi
+                done
             fi
             # continue update
             echo "$timestamp: update $SERVICENAME from version $(echo $installed_version) to $(echo $current_steam_version)" >> "$LOGDIR/arkserver.log"
-                        echo "$(date) update $SERVICENAME from version $(echo $installed_version) to $(echo $current_steam_version)" >> $(echo $ARKSERVERROOT)/updatelog
+            echo "$(date) update $SERVICENAME from version $(echo $installed_version) to $(echo $current_steam_version)" >> $(echo $ARKSERVERROOT)/updatelog
             cd $STEAMCMDROOT
             $STEAMCMDROOT/steamcmd.sh +login $STEAMUSER $STEAMPASS +force_install_dir "$ARKSERVERROOT" +app_update $APPID +quit
             # $STEAMCMDROOT/steamcmd.sh +runscript $STEAMCMDSCRIPT
@@ -200,17 +200,17 @@ doUpdate() {
             #
             mail -s "ARK-server $current_server Update-Log" $SERVERMAIL < $ARKSERVERROOT/updatelog
             echo "$current_steam_version" > "$ARKSERVERROOT/arkversion"
-                        rm -f $ARKSERVERROOT/updateinprogress
-                        doWipestart
-                else
-                        rm -f $ARKSERVERROOT/updateinprogress
-                fi
+            rm -f $ARKSERVERROOT/updateinprogress
+            doWipestart
+        else
+            rm -f $ARKSERVERROOT/updateinprogress
         fi
+    fi
 }
 
 doCheckRunning() {
-        if [ ! -f $ARKSERVERROOT/updateinprogress ] ; then
-                touch $ARKSERVERROOT/updateinprogress
+    if [ ! -f $ARKSERVERROOT/updateinprogress ] ; then
+        touch $ARKSERVERROOT/updateinprogress
         screen -wipe > /dev/null
         IsServerRunning=`screen -ls $SERVICENAME | grep 'No Sockets found'`
         #echo "IsServerRunning: '$IsServerRunning'"
@@ -260,7 +260,7 @@ doRestore() {
 #broadcast info
 doInfo() {
     echo "$info"
-        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT "broadcast $info"
+    $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT "broadcast $info"
 }
 
 # parameter select
