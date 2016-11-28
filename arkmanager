@@ -1,0 +1,309 @@
+#!/bin/bash
+#
+# ARK: survival evolved - multi ARK manager
+#
+# author: Martin Pajak
+#
+# Requirements: screen, rcon, mail and
+#
+# per server config file named .ark_<ServerNumber>.cfg like this:
+#
+# .ark_1.cfg
+#
+# HOMEDIR="/home/vm"
+# STEAMDIR="$HOMEDIR/Steam"
+# STEAMCMDROOT="$HOMEDIR/steamcmd"      # path of your steamcmd instance
+# STEAMCMDEXEC="steamcmd.sh"        # name of steamcmd executable
+# STEAMCMDSCRIPT="update_ark_1.txt" # optional per server updatescript for steamcmd.sh (see line 184)
+# STEAMUSER="anonymous"             # steam user
+# STEAMPASS=""                      # steam password
+# RCON_EXEC="$HOMEDIR/rcon"
+# # config Server
+# ARKSERVERROOT="$HOMEDIR/ark_server1"    # path of your ARK server files
+# ARKSERVEREXEC="ShooterGame/Binaries/Linux/ShooterGameServer"        # name of ARK server executable
+# ARKSERVERSESSION="Name of your Server"
+# ARKSERVERMAXPLAYERS=100
+# ARKSERVER_IP="IP  of your Server"   # ARK server IP
+# ARKSERVERPORT="27015"       # ARK server port
+# ARKSERVERQPORT="27016"      # ARK server qport
+# ARKSERVERRCONPORT="32330"   # ARK server RCON port
+# ARKSERVERPASS=""            # ARK server password
+# ARKSERVERAPASS="Admin password"     # ARK server admin password
+#
+# # config service
+# SERVICENAME="Arkserver_1"   # Name of the service (screen name)
+# LOGDIR="/var/log/arktools"  # Logs path
+# APPID=376030                # Steam server App ID
+# SERVERMAIL=you@youremaildomain      # Log email
+# # backup
+# BACKUPROOT="$HOMEDIR/ARK_backup1"
+# BACKUPORIGIN="$ARKSERVERROOT/ShooterGame/Saved/SavedArks"
+#
+# ARKSERVEROPTS=""TheIsland?SessionName=$ARKSERVERSESSION?MultiHome=$ARKSERVER_IP?Port=$ARKSERVERPORT?QueryPort=$ARKSERVERQPORT?MaxPlayers=$ARKSERVERMAXPLAYERS?ServerPassword=$ARKSERVERPASS?ServerAdminPassword=$ARKSERVERAPASS?RCONEnabled=True?RCONPort=$ARKSERVERRCONPORT?RCONServerGameLogBuffer=600?NonPermanentDiseases=true?listen -log -servergamelog -culture=de -allcores -UseBattlEye -PreventOfflinePvP=true -PreventOfflinePvPInterval=10 -ShowFloatingDamageText=true -EnableExtraStructurePreventionVolumes=true "
+#
+
+if [ "$(id -u)" == "0" ]; then
+   echo "This script must NOT be run as root" 1>&2
+   exit 1
+fi
+
+# Global variables
+current_server="$1"
+CONFIGFILENAME="/home/vm/.ark_"$current_server".cfg"
+# echo " Config file: $CONFIGFILENAME"
+source $CONFIGFILENAME
+
+# init
+if [ ! -d "$ARKSERVERROOT" ]; then
+    mkdir $ARKSERVERROOT
+fi
+thejob=""
+update=0
+# mark the date of last action on this server (needed for mail)
+timestamp=$( date )
+echo $timestamp > $ARKSERVERROOT/lastdate
+
+#colect all params to get broadcast message
+info="$3"
+for ((i=4;i<=$#;i++)) ; do
+    info="$info ${!i}"
+done
+
+# start function
+doStart() {
+    thejob="$ARKSERVERROOT/$ARKSERVEREXEC $ARKSERVEROPTS"
+    screen -dmS "$SERVICENAME" $thejob
+    echo "$timestamp: start $SERVICENAME" >> "$LOGDIR/arkserver.log"
+}
+
+# start function with dino wipe
+doWipestart() {
+    thejob="$ARKSERVERROOT/$ARKSERVEREXEC $ARKSERVEROPTS -ForceRespawnDinos"
+    screen -dmS "$SERVICENAME" $thejob
+    echo "$timestamp: wipestart $SERVICENAME" >> "$LOGDIR/arkserver.log"
+}
+
+# stop function
+doStop() {
+    $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT doexit
+    sleep 5
+    echo "$timestamp: stop $SERVICENAME" >> "$LOGDIR/arkserver.log"
+}
+
+# kill function
+doKill() {
+    screenToKillName=`screen -ls $SERVICENAME | grep Detached | cut -d. -f1`".$SERVICENAME"
+    echo "screenToKillName: $screenToKillName"
+    screen -S $screenToKillName -p 0 -X quit
+    sleep 5
+    echo "$timestamp: kill $SERVICENAME" >> "$LOGDIR/arkserver.log"
+}
+
+# install function
+doInstall() {
+    # check whether the server is gone down
+    screen -wipe > /dev/null
+    IsServerRunning=`screen -ls $SERVICENAME | grep 'No Sockets found'`
+    if [ "test$IsServerRunning" == "test" ] ; then
+        echo "WARNING: Server $SERVICENAME is running. Install NOT possible!"
+    else
+        cd $STEAMCMDROOT
+        ./$STEAMCMDEXEC +login $steamuser $steampass +force_install_dir "$ARKSERVERROOT" +app_update $APPID validate +quit
+    fi
+}
+
+# update function
+doUpdate() {
+    if [ ! -f $ARKSERVERROOT/"arkversion" ] ; then
+        echo "0" > $ARKSERVERROOT/"arkversion"
+    fi
+    installed_version=`cat $ARKSERVERROOT/"arkversion"`
+    echo "Installed version $installed_version"
+    rm -fr $STEAMDIR/appcache
+    cd $STEAMCMDROOT
+    current_steam_version=`./$STEAMCMDEXEC +login anonymous +app_info_update 1 +app_info_print $APPID +quit | grep -EA 1000 "^\s+\"branches\"$" | grep -EA 5 "^\s+\"public\"$" | grep -m 1 -EB 10 "^\s+}$" | grep -E "^\s+\"buildid\"\s+" | tr '[:blank:]"' ' ' | tr -s ' ' | cut -d' ' -f3`
+    echo "Steam version $current_steam_version"
+    # echo $update
+    if [ ! $current_steam_version == $installed_version ] && [ ! $current_steam_version == "" ] && [ ! $installed_version == "" ] ; then
+            update=1
+    fi
+    # echo $update
+        if [ -f $ARKSERVERROOT/updateinprogress ] ; then
+                if [ $(( (`date +%s` - `stat -L --format %Y $ARKSERVERROOT/updateinprogress`) > (60*60) )) -eq 1 ] ; then
+                        rm -f $ARKSERVERROOT/updateinprogress
+                fi
+        fi
+        if [ ! -f $ARKSERVERROOT/updateinprogress ] ; then
+                touch $ARKSERVERROOT/updateinprogress
+        if [ $update == 1 ] ; then
+                        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, server is restarting in 10 minutes!
+                        sleep 5m
+                        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, server is restarting in 5 minutes!
+                        sleep 2m
+                        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, server is restarting in 3 minutes!
+                        sleep 2m
+                        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, server is restarting in 1 minutes!
+                        sleep 1m
+                        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, world will be saved now and server restarted!
+                        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT saveworld
+                        sleep 5
+                        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT doexit
+                        sleep 20
+            # check whether the server is gone down and wait if needed
+            screen -wipe > /dev/null
+            IsServerRunning=`screen -ls $SERVICENAME | grep 'No Sockets found'`
+            if [ "test$IsServerRunning" == "test" ] ; then
+                echo "Server $SERVICENAME is still running. waiting..."
+                                COUNTER=0
+                CONTINUE=0
+                                while [ $CONTINUE -lt 1 ]; do
+                    sleep 10
+                    IsServerRunning=`screen -ls $SERVICENAME | grep 'No Sockets found'`
+                    if [ "test$IsServerRunning" != "test" ] ; then
+                                                CONTINUE=1
+                    else
+                        COUNTER=$((COUNTER+1))
+                        # try to kill server through screen session
+                        if [ $COUNTER -gt 17 ] ; then
+                            doKill
+                        fi
+                        # we will NOT also hang with the server :-)
+                        if [ $COUNTER -gt 18 ] ; then
+                            mail -s "ARK-server $current_server is hanging. update not possible!" $SERVERMAIL < $ARKSERVERROOT/lastdate
+                            rm -f $ARKSERVERROOT/updateinprogress
+                            exit 1
+                        fi
+                                        fi
+                                done
+            fi
+            # continue update
+            echo "$timestamp: update $SERVICENAME from version $(echo $installed_version) to $(echo $current_steam_version)" >> "$LOGDIR/arkserver.log"
+                        echo "$(date) update $SERVICENAME from version $(echo $installed_version) to $(echo $current_steam_version)" >> $(echo $ARKSERVERROOT)/updatelog
+            cd $STEAMCMDROOT
+            $STEAMCMDROOT/steamcmd.sh +login $STEAMUSER $STEAMPASS +force_install_dir "$ARKSERVERROOT" +app_update $APPID +quit
+            # $STEAMCMDROOT/steamcmd.sh +runscript $STEAMCMDSCRIPT
+            #
+            # alternative steamcmd.sh update script addressed by $STEAMCMDSCRIPT
+            #
+            # @NoPromptForPassword 1
+            # @ShutdownOnFailedCommand 0
+            # nSubscribedAutoDownloadMaxSimultaneous 32
+            # @cMaxContentServersToRequest 32
+            # @cMaxInitialDownloadSources 32
+            # @fMinDataRateToAttemptTwoConnectionsMbps 0.01
+            # @fDownloadRateImprovementToAddAnotherConnection 0.01
+            # login anonymous
+            # force_install_dir /home/vm/ark_server1
+            # app_update 376030
+            # //validate
+            # quit
+            #
+            mail -s "ARK-server $current_server Update-Log" $SERVERMAIL < $ARKSERVERROOT/updatelog
+            echo "$current_steam_version" > "$ARKSERVERROOT/arkversion"
+                        rm -f $ARKSERVERROOT/updateinprogress
+                        doWipestart
+                else
+                        rm -f $ARKSERVERROOT/updateinprogress
+                fi
+        fi
+}
+
+doCheckRunning() {
+        if [ ! -f $ARKSERVERROOT/updateinprogress ] ; then
+                touch $ARKSERVERROOT/updateinprogress
+        screen -wipe > /dev/null
+        IsServerRunning=`screen -ls $SERVICENAME | grep 'No Sockets found'`
+        #echo "IsServerRunning: '$IsServerRunning'"
+        if [ "test$IsServerRunning" != "test" ] ; then
+            echo "Server $SERVICENAME is NOT running. Restarting"
+            mail -s "ARK-server $current_server was NOT running" $SERVERMAIL < $ARKSERVERROOT/lastdate
+            doStart
+        else
+            echo "Server $SERVICENAME is running"
+        fi
+        rm -f $ARKSERVERROOT/updateinprogress
+    fi
+}
+
+# backup function
+doBackup() {
+    # check whether the server is gone down
+    screen -wipe > /dev/null
+    IsServerRunning=`screen -ls $SERVICENAME | grep 'No Sockets found'`
+    if [ "test$IsServerRunning" == "test" ] ; then
+        echo "WARNING: Server $SERVICENAME is running."
+        if [ ! -d "$BACKUPROOT" ]; then
+            mkdir $BACKUPROOT
+        fi;
+        rm -rf "$BACKUPROOT/*"
+        cp -a $BACKUPORIGIN/* "$BACKUPROOT/"
+        echo "$timestamp: backup $SERVICENAME" >> "$LOGDIR/arkserver.log"
+    fi
+}
+
+# restore function
+doRestore() {
+    # check whether the server is gone down
+    screen -wipe > /dev/null
+    IsServerRunning=`screen -ls $SERVICENAME | grep 'No Sockets found'`
+    if [ "test$IsServerRunning" == "test" ] ; then
+        echo "WARNING: Server $SERVICENAME is running. Restore NOT possible!"
+    else
+        if [ ! -d "$BACKUPROOT" ]; then
+            echo "Error: backup root not available" >> "$LOGDIR/arkserver.log"
+        fi
+        cp -a $BACKUPROOT/* "$BACKUPORIGIN/"
+        echo "$timestamp: restore $SERVICENAME" >> "$LOGDIR/arkserver.log"
+    fi
+}
+
+#broadcast info
+doInfo() {
+    echo "$info"
+        $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT "broadcast $info"
+}
+
+# parameter select
+case "$2" in
+    start)
+        doStart
+    ;;
+    wipestart)
+        doWipestart
+    ;;
+    stop)
+        doStop
+    ;;
+    kill)
+        doKill
+    ;;
+    runcheck)
+        doCheckRunning
+    ;;
+    restart)
+        doStop
+        echo "$timestamp: stop" >> "$LOGDIR/arkserver.log"
+        sleep 60
+        doStart
+        echo "$timestamp: start" >> "$LOGDIR/arkserver.log"
+        echo "$timestamp: restart" >> "$LOGDIR/arkserver.log"
+    ;;
+    install)
+        doInstall
+    ;;
+    update)
+        doUpdate
+    ;;
+    backup)
+        doBackup
+    ;;
+    restore)
+        doRestore
+    ;;
+    broadcast)
+        doInfo
+    ;;
+    *)
+        echo "use arkmanager <ArkServerNumber> <start|wipestart|stop|kill|runcheck|restart|install|update|broadcast|backup|restore> [broadcast text]"
+    ;;
+esac
