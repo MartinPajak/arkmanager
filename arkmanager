@@ -32,14 +32,14 @@
 #
 # # config service
 # SERVICENAME="Arkserver_1"   # Name of the service (screen name)
-# LOGDIR="/var/log/arktools"  # Logs path
+# LOGDIR="/var/log/arkmanager"  # Logs path
 # APPID=376030                # Steam server App ID
 # SERVERMAIL=you@youremaildomain      # Log email
 # # backup
 # BACKUPROOT="$HOMEDIR/ARK_backup1"
 # BACKUPORIGIN="$ARKSERVERROOT/ShooterGame/Saved/SavedArks"
 #
-# ARKSERVEROPTS=""TheIsland?SessionName=$ARKSERVERSESSION?MultiHome=$ARKSERVER_IP?Port=$ARKSERVERPORT?QueryPort=$ARKSERVERQPORT?MaxPlayers=$ARKSERVERMAXPLAYERS?ServerPassword=$ARKSERVERPASS?ServerAdminPassword=$ARKSERVERAPASS?RCONEnabled=True?RCONPort=$ARKSERVERRCONPORT?RCONServerGameLogBuffer=600?NonPermanentDiseases=true?listen -log -servergamelog -culture=de -allcores -UseBattlEye -PreventOfflinePvP=true -PreventOfflinePvPInterval=10 -ShowFloatingDamageText=true -EnableExtraStructurePreventionVolumes=true "
+# ARKSERVEROPTS="TheIsland?SessionName=$ARKSERVERSESSION?MultiHome=$ARKSERVER_IP?Port=$ARKSERVERPORT?QueryPort=$ARKSERVERQPORT?MaxPlayers=$ARKSERVERMAXPLAYERS?ServerPassword=$ARKSERVERPASS?ServerAdminPassword=$ARKSERVERAPASS?RCONEnabled=True?RCONPort=$ARKSERVERRCONPORT?RCONServerGameLogBuffer=600?NonPermanentDiseases=true?listen -log -servergamelog -culture=de -allcores -UseBattlEye -PreventOfflinePvP=true -PreventOfflinePvPInterval=10 -ShowFloatingDamageText=true -EnableExtraStructurePreventionVolumes=true "
 #
 
 if [ "$(id -u)" == "0" ]; then
