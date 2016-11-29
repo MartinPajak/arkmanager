@@ -5,6 +5,7 @@ Multi-ARK-Manager, linux script that can manage multiple instances of ARK surviv
 
 usage: arkmanager < ArkServerNumber > < start|wipestart|stop|kill|runcheck|restart|install|update|broadcast|backup|restore > [broadcast text]
 
+
 The following commands are implemented:
 
 Start - self explanatory
@@ -28,6 +29,7 @@ Broadcast - fast way to send a message to the server (chat)
 Backup - copies all World, Tribe and Player files to a given location
 
 Restore - copies all World, Tribe and Player files back from the backup location
+
 
 
 With the help of the crontab you can do update check (update) hourly, in which the users are warned in time, the server is stoped, updated and restarted. 
