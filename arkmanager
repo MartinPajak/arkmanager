@@ -222,6 +222,8 @@ doCheckRunning() {
             echo "Server $SERVICENAME is running"
         fi
         rm -f $ARKSERVERROOT/updateinprogress
+    else
+        echo "Server $SERVICENAME is updating. No check!"
     fi
 }
 
