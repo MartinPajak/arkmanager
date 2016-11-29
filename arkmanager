@@ -6,37 +6,38 @@
 #
 # Requirements: screen, rcon, mail and
 #
-# per server config file named .ark_<ServerNumber>.cfg like this:
+# per server config file named .<ServerId>.cfg like this:
 #
-# .ark_1.cfg
+# # example .Arkserver_1.cfg
+#
+# # config service
+# SERVICENAME="Arkserver_1"           # Name of the service (screen name)
+# LOGDIR="/var/log/arkmanager"        # Logs path
+# APPID=376030                        # Steam server App ID
+# SERVERMAIL=you@youremaildomain      # Log email
 #
 # HOMEDIR="/home/vm"
 # STEAMDIR="$HOMEDIR/Steam"
-# STEAMCMDROOT="$HOMEDIR/steamcmd"      # path of your steamcmd instance
-# STEAMCMDEXEC="steamcmd.sh"        # name of steamcmd executable
-# STEAMCMDSCRIPT="update_ark_1.txt" # optional per server updatescript for steamcmd.sh (see line 184)
-# STEAMUSER="anonymous"             # steam user
-# STEAMPASS=""                      # steam password
+# STEAMCMDROOT="$HOMEDIR/steamcmd"         # path of your steamcmd instance
+# STEAMCMDEXEC="steamcmd.sh"               # name of steamcmd executable
+# STEAMCMDSCRIPT="update_$SERVICENAME.txt" # optional per server updatescript for steamcmd.sh (see line 187)
+# STEAMUSER="anonymous"                    # steam user
+# STEAMPASS=""                             # steam password
 # RCON_EXEC="$HOMEDIR/rcon"
 # # config Server
-# ARKSERVERROOT="$HOMEDIR/ark_server1"    # path of your ARK server files
+# ARKSERVERROOT="$HOMEDIR/$SERVICENAME"    # path of your ARK server files
 # ARKSERVEREXEC="ShooterGame/Binaries/Linux/ShooterGameServer"        # name of ARK server executable
 # ARKSERVERSESSION="Name of your Server"
 # ARKSERVERMAXPLAYERS=100
 # ARKSERVER_IP="IP  of your Server"   # ARK server IP
-# ARKSERVERPORT="27015"       # ARK server port
-# ARKSERVERQPORT="27016"      # ARK server qport
-# ARKSERVERRCONPORT="32330"   # ARK server RCON port
-# ARKSERVERPASS=""            # ARK server password
+# ARKSERVERPORT="27015"               # ARK server port
+# ARKSERVERQPORT="27016"              # ARK server qport
+# ARKSERVERRCONPORT="32330"           # ARK server RCON port
+# ARKSERVERPASS=""                    # ARK server password
 # ARKSERVERAPASS="Admin password"     # ARK server admin password
 #
-# # config service
-# SERVICENAME="Arkserver_1"   # Name of the service (screen name)
-# LOGDIR="/var/log/arkmanager"  # Logs path
-# APPID=376030                # Steam server App ID
-# SERVERMAIL=you@youremaildomain      # Log email
 # # backup
-# BACKUPROOT="$HOMEDIR/ARK_backup1"
+# BACKUPROOT="$HOMEDIR/backup_$SERVICENAME"
 # BACKUPORIGIN="$ARKSERVERROOT/ShooterGame/Saved/SavedArks"
 #
 # ARKSERVEROPTS="TheIsland?SessionName=$ARKSERVERSESSION?MultiHome=$ARKSERVER_IP?Port=$ARKSERVERPORT?QueryPort=$ARKSERVERQPORT?MaxPlayers=$ARKSERVERMAXPLAYERS?ServerPassword=$ARKSERVERPASS?ServerAdminPassword=$ARKSERVERAPASS?RCONEnabled=True?RCONPort=$ARKSERVERRCONPORT?RCONServerGameLogBuffer=600?NonPermanentDiseases=true?listen -log -servergamelog -culture=de -allcores -UseBattlEye -PreventOfflinePvP=true -PreventOfflinePvPInterval=10 -ShowFloatingDamageText=true -EnableExtraStructurePreventionVolumes=true "
@@ -49,7 +50,7 @@ fi
 
 # Global variables
 current_server="$1"
-CONFIGFILENAME="/home/vm/.ark_"$current_server".cfg"
+CONFIGFILENAME="/home/vm/."$current_server".cfg"
 # echo " Config file: $CONFIGFILENAME"
 source $CONFIGFILENAME
 
@@ -73,21 +74,21 @@ done
 doStart() {
     thejob="$ARKSERVERROOT/$ARKSERVEREXEC $ARKSERVEROPTS"
     screen -dmS "$SERVICENAME" $thejob
-    echo "$timestamp: start $SERVICENAME" >> "$LOGDIR/arkserver.log"
+    echo "$(date): start $SERVICENAME" >> "$LOGDIR/arkserver.log"
 }
 
 # start function with dino wipe
 doWipestart() {
     thejob="$ARKSERVERROOT/$ARKSERVEREXEC $ARKSERVEROPTS -ForceRespawnDinos"
     screen -dmS "$SERVICENAME" $thejob
-    echo "$timestamp: wipestart $SERVICENAME" >> "$LOGDIR/arkserver.log"
+    echo "$(date): wipestart $SERVICENAME" >> "$LOGDIR/arkserver.log"
 }
 
 # stop function
 doStop() {
     $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT doexit
     sleep 5
-    echo "$timestamp: stop $SERVICENAME" >> "$LOGDIR/arkserver.log"
+    echo "$(date): stop $SERVICENAME" >> "$LOGDIR/arkserver.log"
 }
 
 # kill function
@@ -96,7 +97,7 @@ doKill() {
     echo "screenToKillName: $screenToKillName"
     screen -S $screenToKillName -p 0 -X quit
     sleep 5
-    echo "$timestamp: kill $SERVICENAME" >> "$LOGDIR/arkserver.log"
+    echo "$(date): kill $SERVICENAME" >> "$LOGDIR/arkserver.log"
 }
 
 # install function
@@ -106,6 +107,7 @@ doInstall() {
     IsServerRunning=`screen -ls $SERVICENAME | grep 'No Sockets found'`
     if [ "test$IsServerRunning" == "test" ] ; then
         echo "WARNING: Server $SERVICENAME is running. Install NOT possible!"
+        exit 1
     else
         cd $STEAMCMDROOT
         ./$STEAMCMDEXEC +login $steamuser $steampass +force_install_dir "$ARKSERVERROOT" +app_update $APPID validate +quit
@@ -136,6 +138,7 @@ doUpdate() {
     if [ ! -f $ARKSERVERROOT/updateinprogress ] ; then
         touch $ARKSERVERROOT/updateinprogress
         if [ $update == 1 ] ; then
+            echo "Updating server $SERVICENAME..."
             $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, server is restarting in 10 minutes!
             sleep 5m
             $RCON_EXEC -P$ARKSERVERAPASS -a$ARKSERVER_IP -p$ARKSERVERRCONPORT broadcast New update available, server is restarting in 5 minutes!
@@ -177,8 +180,8 @@ doUpdate() {
                 done
             fi
             # continue update
-            echo "$timestamp: update $SERVICENAME from version $(echo $installed_version) to $(echo $current_steam_version)" >> "$LOGDIR/arkserver.log"
-            echo "$(date) update $SERVICENAME from version $(echo $installed_version) to $(echo $current_steam_version)" >> $(echo $ARKSERVERROOT)/updatelog
+            echo "$(date): update $SERVICENAME from version $(echo $installed_version) to $(echo $current_steam_version)" >> "$LOGDIR/arkserver.log"
+            echo "$(date): update $SERVICENAME from version $(echo $installed_version) to $(echo $current_steam_version)" >> $(echo $ARKSERVERROOT)/updatelog
             cd $STEAMCMDROOT
             $STEAMCMDROOT/steamcmd.sh +login $STEAMUSER $STEAMPASS +force_install_dir "$ARKSERVERROOT" +app_update $APPID +quit
             # $STEAMCMDROOT/steamcmd.sh +runscript $STEAMCMDSCRIPT
@@ -199,7 +202,7 @@ doUpdate() {
             # quit
             #
             mail -s "ARK-server $current_server Update-Log" $SERVERMAIL < $ARKSERVERROOT/updatelog
-            echo "$current_steam_version" > "$ARKSERVERROOT/arkversion"
+            echo "$(date): $current_steam_version" > "$ARKSERVERROOT/arkversion"
             rm -f $ARKSERVERROOT/updateinprogress
             doWipestart
         else
@@ -240,7 +243,7 @@ doBackup() {
         fi;
         rm -rf "$BACKUPROOT/*"
         cp -a $BACKUPORIGIN/* "$BACKUPROOT/"
-        echo "$timestamp: backup $SERVICENAME" >> "$LOGDIR/arkserver.log"
+        echo "$(date): backup $SERVICENAME" >> "$LOGDIR/arkserver.log"
     fi
 }
 
@@ -251,12 +254,16 @@ doRestore() {
     IsServerRunning=`screen -ls $SERVICENAME | grep 'No Sockets found'`
     if [ "test$IsServerRunning" == "test" ] ; then
         echo "WARNING: Server $SERVICENAME is running. Restore NOT possible!"
+        exit 1
     else
         if [ ! -d "$BACKUPROOT" ]; then
-            echo "Error: backup root not available" >> "$LOGDIR/arkserver.log"
+            echo "$(date): Error: backup root not available" >> "$LOGDIR/arkserver.log"
+            exit 1
         fi
+        touch $ARKSERVERROOT/updateinprogress
         cp -a $BACKUPROOT/* "$BACKUPORIGIN/"
-        echo "$timestamp: restore $SERVICENAME" >> "$LOGDIR/arkserver.log"
+        echo "$(date): restore $SERVICENAME" >> "$LOGDIR/arkserver.log"
+        rm -f $ARKSERVERROOT/updateinprogress
     fi
 }
 
@@ -307,6 +314,6 @@ case "$2" in
         doInfo
     ;;
     *)
-        echo "use arkmanager <ArkServerNumber> <start|wipestart|stop|kill|runcheck|restart|install|update|broadcast|backup|restore> [broadcast text]"
+        echo "use arkmanager <ArkServerId> <start|wipestart|stop|kill|runcheck|restart|install|update|broadcast|backup|restore> [broadcast text]"
     ;;
 esac
