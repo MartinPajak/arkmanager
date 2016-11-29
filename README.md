@@ -32,5 +32,5 @@ Restore - copies all World, Tribe and Player files back from the backup location
 
 
 
-With the help of the crontab you can do update check (update) hourly, in which the users are warned in time, the server is stoped, updated and restarted. 
+With the help of the crontab you can do update check (update) hourly, in which the users are warned in time, the world is saved, the server is stoped, updated and restarted. 
 It is also possible to check every x minutes whether the server is still running (runcheck) and, if necessary, restart it.
