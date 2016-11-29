@@ -22,7 +22,7 @@ Restart - self explanatory
 
 Install - installs the server files at a given location
 
-Update - check if new server version is available with controlled update
+Update - check if new server version is available with controlled (user warnings, save) update
 
 Broadcast - fast way to send a message to the server (chat)
 
