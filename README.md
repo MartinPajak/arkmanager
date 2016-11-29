@@ -8,15 +8,25 @@ usage: arkmanager < ArkServerNumber > < start|wipestart|stop|kill|runcheck|resta
 The following commands are implemented:
 
 Start - self explanatory
+
 Wipestart - start with redistribution of the untamed dinos in the world
+
 Stop - stops the server via RCON (regular stop)
+
 Kill - stops the server via screen (abort)
+
 Runcheck - checks if the server is running and restarts it if necessary
+
 Restart - self explanatory
+
 Install - installs the server files at a given location
+
 Update - check if new server version is available with controlled update
+
 Broadcast - fast way to send a message to the server (chat)
+
 Backup - copies all World, Tribe and Player files to a given location
+
 Restore - copies all World, Tribe and Player files back from the backup location
 
 
