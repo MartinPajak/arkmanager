@@ -53,6 +53,9 @@ current_server="$1"
 CONFIGFILENAME="/home/vm/."$current_server".cfg"
 # echo " Config file: $CONFIGFILENAME"
 source $CONFIGFILENAME
+# if [ $current_server != $SERVICENAME ] ; then
+#     echo "Server Id=$current_server does NOT match $SERVICENAME!!! continue?
+# fi
 
 # init
 if [ ! -d "$ARKSERVERROOT" ]; then
@@ -202,7 +205,7 @@ doUpdate() {
             # quit
             #
             mail -s "ARK-server $current_server Update-Log" $SERVERMAIL < $ARKSERVERROOT/updatelog
-            echo "$(date): $current_steam_version" > "$ARKSERVERROOT/arkversion"
+            echo "$current_steam_version" > "$ARKSERVERROOT/arkversion"
             rm -f $ARKSERVERROOT/updateinprogress
             doWipestart
         else
